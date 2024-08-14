@@ -54,3 +54,11 @@ Zhang C. *Learnable Topological Features For Phylogenetic Inference via Graph Ne
 --- 
 
 Please consider citing our work if you find this codebase useful:
+```
+@article{xie2024vbpisibranch,
+  title={Variational Bayesian Phylogenetic Inference with Semi-implicit Branch Length Distributions},
+  author={Xie, Tianyu and Matsen IV, Frederick A and Suchard, Marc A and Zhang, Cheng},
+  journal={arXiv preprint arXiv:2408.05058},
+  year={2024}
+}
+```
