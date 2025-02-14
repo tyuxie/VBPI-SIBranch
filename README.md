@@ -10,6 +10,7 @@ This repository is a light CPU-based implementation of VBPI-SIBranch.
 To create the torch environment, use the following command:
 ```
 conda env create -f environment.yml
+conda activate vbpisibranch
 ```
 
 ## Training
