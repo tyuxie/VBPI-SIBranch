@@ -91,7 +91,7 @@ def parse_args():
     parser.add_argument('--tf', type=int, default=1000, help='monitor frequency during training, default=1000')
     parser.add_argument('--sf', type=int, default=100000, help='save frequency, default=100000')
     parser.add_argument('--lbf', type=int, default=5000, help='lower bound test frequency, default=5000')
-    parser.add_argument('--workdir', type=str, default='results')
+    parser.add_argument('--workdir', type=str, default='synthetic_exp/results')
     parser.add_argument('--gradMethod', type=str, default='sivi', help=' vimco | rws ')
 
     args = parser.parse_args()

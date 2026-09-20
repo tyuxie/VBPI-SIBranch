@@ -49,6 +49,34 @@ These commands will auto-load the trained model and compute the evidence lower b
 
 For DS1, this codebase also supports computing the evidence lower bounds on individual trees by adding the "--empFreq" argument.
 
+## Synthetic experiments on eight-leaf trees
+
+The `synthetic_exp` directory contains synthetic experiments on eight-taxon
+datasets. The simulated alignments are under `synthetic_exp/L8trees/`, grouped
+by sequence length (`seqlen_10`, `seqlen_20`, ..., `seqlen_1000`). Each
+experiment directory contains:
+
+- `dna.fasta`: the input alignment;
+- `tree.newick`: the simulated reference tree.
+
+The shared tree-support set is stored in
+`synthetic_exp/ufboot/L8ALL_ufboot_rep_1` through
+`synthetic_exp/ufboot/L8ALL_ufboot_rep_10`. The synthetic runner loads this
+support set with the dataset name `L8ALL`, and filters invalid subsplit
+configurations before training.
+
+### Run all synthetic experiments
+
+Run the batch script from the repository root:
+
+```bash
+bash synthetic_exp/run_L8_synthetic_exp.sh
+```
+
+The script discovers every `dna.fasta` under `synthetic_exp/L8trees/` and
+trains the MIWLB model (`iwhvi` branch-length model and `iwhvi` gradient
+method) for 40,000 iterations.
+
 ## References
 Zhang C. *Learnable Topological Features For Phylogenetic Inference via Graph Neural Networks*. ICLR 2023.
 
