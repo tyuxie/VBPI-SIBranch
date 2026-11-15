@@ -9,6 +9,15 @@ cd "$ROOT"
 PYTHON_BIN="${PYTHON_BIN:-python}"
 RUN_DATE="${RUN_DATE:-$(date +%Y%m%d%H%M%S)}"
 
+resolve_workdir() {
+  case "$1" in
+    /*) printf '%s\n' "$1" ;;
+    *) printf '%s\n' "$ROOT/$1" ;;
+  esac
+}
+
+NF_ROOT="$(resolve_workdir "${WORKDIR:-results/vbpi_nf}")"
+
 usage() {
   cat <<'EOF'
 Usage: bash vbpi_nf/reproduce.sh <recipe>
@@ -38,7 +47,7 @@ _benchmark() {
       if [ "${REPLICATES:-1}" -gt 1 ]; then tag="${RUN_TAG}_rep${replicate}"; fi
       seed=$(( ${SEED:-2023} + replicate - 1 ))
       args=(--dataset "$dataset" --flow_type realnvp
-        --date "$RUN_DATE" --run-tag "$tag" --workdir "$ROOT/${WORKDIR:-results/vbpi_nf}" --seed "$seed"
+        --date "$RUN_DATE" --run-tag "$tag" --workdir "$NF_ROOT" --seed "$seed"
         --maxIter "${MAX_ITER:-400000}" --stepszBranch "${NF_STEPSZ_BRANCH:-0.0001}"
         --eval-repeats "${EVAL_REPEATS:-100}" --eval-runs "${EVAL_RUNS:-10000}"
         --eval-ml-repeats "${EVAL_ML_REPEATS:-1000}" --empFreqTrees "${EMPFREQ_TREES:-42}"
@@ -62,7 +71,7 @@ _samples() {
       --dataset "$dataset" --tree-id "$tree_id" --checkpoint "$checkpoint" \
       --feature-dim "${NF_FEATURE_DIM:-2}" --hidden-sizes "${NF_HIDDEN_DIM:-100}" \
       --flow-layers "${NF_LAYERS:-10}" --n-samples "${N_SAMPLES:-100000}" \
-      --output "$ROOT/results/vbpi_nf/$outdir/${dataset}_tree${tree_id}_branches.npy"
+      --output "$NF_ROOT/$outdir/${dataset}_tree${tree_id}_branches.npy"
   done
 }
 
@@ -85,13 +94,13 @@ training_performance)
   ;;
 # ------------------------------------------------------ joint_branch_ds8
 joint_branch_ds8)
-  checkpoint="${WORKDIR:-results/vbpi_nf}/DS8/realnvp_${NF_LAYERS:-10}/${RUN_TAG:-joint_branch_ds8_nf}_${RUN_DATE}_${SEED:-2023}/final.pt"
+  checkpoint="$NF_ROOT/DS8/realnvp_${NF_LAYERS:-10}/${RUN_TAG:-joint_branch_ds8_nf}_${RUN_DATE}_${SEED:-2023}/final.pt"
   test -f "$checkpoint" || { echo "Missing VBPI-NF checkpoint: $checkpoint" >&2; exit 2; }
   TREE_IDS="${TREE_IDS:-1 2}" _samples DS8 "$checkpoint" joint_branch_ds8
   ;;
 # ---------------------------------------------------- joint_branch_ds1
 joint_branch_ds1)
-  checkpoint="${WORKDIR:-results/vbpi_nf}/DS1/realnvp_${NF_LAYERS:-10}/${RUN_TAG:-joint_branch_ds1_nf}_${RUN_DATE}_${SEED:-2023}/final.pt"
+  checkpoint="$NF_ROOT/DS1/realnvp_${NF_LAYERS:-10}/${RUN_TAG:-joint_branch_ds1_nf}_${RUN_DATE}_${SEED:-2023}/final.pt"
   test -f "$checkpoint" || { echo "Missing VBPI-NF checkpoint: $checkpoint" >&2; exit 2; }
   TREE_IDS="${TREE_IDS:-1 2 36 37}" _samples DS1 "$checkpoint" branch_dist
   ;;

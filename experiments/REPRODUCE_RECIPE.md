@@ -57,20 +57,6 @@ python3 mrbayes/make_nex.py --root /path/to/workdir        # launch files only
 MRBAYES_ROOT=/path/to/workdir MAXJOBS=8 bash mrbayes/run_mrbayes.sh
 ```
 
-MrBayes derives output names from the input path, so each run writes
-`treeN/treeN.nex.t` next to its launch file; point `MRBAYES_TREE_ROOT` at that
-work directory when running `experiments/reproduce.sh branch_dist`.
-`run_mrbayes.sh` accepts `MAXJOBS` (parallel jobs, default 8) and `FRESH=1`
-(delete existing checkpoints and outputs). MrBayes is required, e.g.
-`brew install mrbayes` on macOS.
-
-The template's `mcmc` line runs 10 million generations (`ngen=10000000`,
-`samplef=1000`, 4 chains), yielding 10,001 samples per tree (the short chain).
-The manuscript's Figures 5-6 reference distributions come from the long chain
-(`ngen=1000000000`, about one million samples per tree), whose tree logs are
-distributed in the complete data package (see `DATA.md`); re-running it takes
-months of CPU per tree.
-
 ## VBPI-NF baseline experiments
 
 The `vbpi_nf/` directory contains a vendored VBPI-NF implementation (Zhang,
@@ -105,25 +91,3 @@ The NF training recipes run at paper scale (`MAX_ITER=400000`,
 | `NF_STEPSZ_BRANCH` | 0.0001 | NF branch-length learning rate |
 | `DO_EVALUATION` / `EMP_FREQ` | 1 / 0 | run raw evaluation after training / use empirical topology frequencies |
 | `MRBAYES_TREE_ROOT` | required for `branch_dist` | long-chain MrBayes tree logs (see `DATA.md`) |
-
-## Computation time
-
-Every training run writes `<run>_times.npy` next to its checkpoint: cumulative
-wall-clock seconds sampled at each logging block, so the last entry is that
-run's training time. The training time of a recipe is the sum of the last
-entries over its run directories, for example:
-
-```bash
-python -c "import glob,sys; import numpy as np; \
-  print(sum(float(np.load(f)[-1]) for f in glob.glob('results/<recipe>/**/*_times.npy', recursive=True)) / 3600, 'hours')"
-```
-
-Timing files are written by training runs; the fixed-tree fits
-(`run_fixed_tree.py`), conditional sampling (`sample_joint_branches.py`), and
-the NF sampling/fixed-tree stages are timed externally, e.g.
-`time bash experiments/reproduce.sh fixedtree_ds1`.
-
-`README.md` tabulates 400,000-iteration training times on a single core of an
-Intel Xeon Platinum 9242 (11.8-26.2 h for VBPI, 23.6-55.6 h for
-VBPI-SIBranch/MIWLB across DS1-DS8). Other models and stages depend on
-hardware; the procedure above measures them per workflow.

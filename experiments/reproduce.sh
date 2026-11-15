@@ -19,9 +19,9 @@ usage() {
 
 # Final checkpoint written by run_benchmark_matrix.sh.
 checkpoint_path() { # dataset model workdir tag date
-  local dataset=$1 model=$2 workdir=$3 tag=$4 date=$5 grad=$2 suffix=
+  local dataset=$1 model=$2 workdir=$3 tag=$4 date=$5 grad=$2 suffix= nz=${NZ:-50}
   if [ "$model" = gnn ]; then grad=vimco; suffix=_edge_sum; fi
-  if [ "$model" = sivi ]; then suffix=_nz_50; fi
+  if [ "$model" = sivi ]; then suffix="_nz_${nz}"; fi
   printf '%s/%s/%s/%s_10%s_%s_%s/final.pt\n' \
     "$workdir" "$dataset" "$model" "$grad" "$suffix" "$tag" "$date"
 }

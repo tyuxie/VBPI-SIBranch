@@ -42,6 +42,7 @@ def main():
                          % len(topos))
 
     root = Path(args.root)
+    root.mkdir(parents=True, exist_ok=True)
     for i in (int(t) for t in args.tree_ids.split()):
         topo = topos[i - 1].strip()
         if not (topo.startswith("(") and topo.endswith(")")):
