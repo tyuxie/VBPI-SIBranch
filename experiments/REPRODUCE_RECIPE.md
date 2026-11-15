@@ -66,7 +66,7 @@ NeurIPS 2020). Its commands are:
 |---|---|---|
 | NF training (generic) | `bash vbpi_nf/reproduce.sh train` | RealNVP training (+ optional raw evaluation) over `DATASETS` |
 | Table 1 (NF leg) | `bash vbpi_nf/reproduce.sh mll_benchmark` | DS1-DS8 RealNVP runs with raw Monte Carlo evaluations |
-| Figure 3 (NF leg) | `REPLICATES=100 bash vbpi_nf/reproduce.sh training_performance` | Training performance on DS1-DS8 (NF) |
+| Figure 3 (NF leg) | `REPLICATES=10 bash vbpi_nf/reproduce.sh training_performance` | Training performance on DS1-DS8 (NF) |
 | Figure 1 (NF samples) | `RUN_DATE=<date> bash vbpi_nf/reproduce.sh joint_branch_ds8` | Joint branch samples for DS8 trees from the Figure 1 NF checkpoint |
 | Figures 5-6 (NF samples) | `RUN_DATE=<date> bash vbpi_nf/reproduce.sh joint_branch_ds1` | Joint branch samples for DS1 trees from the Figures 5-6 NF checkpoint |
 | Figures 4-6 (NF fixed-tree) | `TREE_IDS="1 2 3" bash vbpi_nf/reproduce.sh fixed_tree` | Fixed-topology branch fits (all 42 trees unless `TREE_IDS` is set) |
@@ -83,7 +83,7 @@ The NF training recipes run at paper scale (`MAX_ITER=400000`,
 | `MODELS` | recipe-dependent | e.g. `gnn sivi iwhvi`, `sivi iwhvi`, `lognorm sivi iwhvi` |
 | `DATASETS` | recipe-dependent | e.g. `DS1 DS8` |
 | `MAX_ITER` | 400000 (benchmark) / 200000 (fixed-tree) | training iterations |
-| `REPLICATES` | 1 | seeded runs per dataset/model |
+| `REPLICATES` | 1 (10 for `training_performance`) | seeded runs per dataset/model |
 | `HL_GRID` / `NZ_GRID` / `ACTIVATIONS` | `1 2 3 4` / `20 50 100` / `elu relu` | Table 3 rounds, Figure 7 NZ grid, Table 4 activations |
 | `TREE_IDS` | all 42 | fixed-tree topology subset for `fixedtree_ds1`/`branch_dist`/NF `fixed_tree` |
 | `N_SAMPLES` / `BRANCH_SAMPLES` / `BOUND_RUNS` | 100000 / 1000000 / 0 | sampling and fixed-tree evaluation options |

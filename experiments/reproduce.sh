@@ -82,11 +82,11 @@ joint_branch_ds8)
 # ----------------------------------------------------------------- training_performance
 training_performance)
   DATASETS="$DS18" MODELS="${MODELS:-gnn sivi iwhvi}" \
-    RUN_DATE="$RUN_DATE" RUN_TAG=training_performance REPLICATES="${REPLICATES:-100}" \
+    RUN_DATE="$RUN_DATE" RUN_TAG=training_performance REPLICATES="${REPLICATES:-10}" \
     WORKDIR="${WORKDIR:-results/training_performance}" DO_EVALUATION=0 \
     bash "$HERE/run_benchmark_matrix.sh"
   DATASETS="$DS18" RUN_DATE="$RUN_DATE" RUN_TAG=training_performance_nf \
-    REPLICATES="${REPLICATES:-100}" \
+    REPLICATES="${REPLICATES:-10}" \
     WORKDIR="${NF_WORKDIR:-results/training_performance_nf}" DO_EVALUATION=0 \
     bash "$ROOT/vbpi_nf/reproduce.sh" training_performance
   ;;
