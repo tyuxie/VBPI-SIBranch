@@ -149,7 +149,6 @@ class SBN(nn.Module):
             if parent in self.subsplit_parameter_set:
                 return self.CPDParser.get(self.CPDs, parent)
             else:
-                # return self.ss_CPDs[parent]
                 return self.one_tensor
             
     

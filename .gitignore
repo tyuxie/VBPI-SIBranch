@@ -3,3 +3,6 @@ __pycache__/
 *.py[cod]
 results/
 synthetic_exp/results/
+ACC_form.Rmd
+ACC_form.pdf
+.claude/

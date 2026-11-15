@@ -9,7 +9,7 @@ from src.gnnModels_slim import GNNStack, GatedGraphConv, IDConv, MeanStdPooling
 
 
 class GNNModel(nn.Module):          
-    def __init__(self, ntips, hidden_dim=100, num_layers=1, gnn_type='gcn', aggr='sum', project=False, bias=True, **kwargs):
+    def __init__(self, ntips, hidden_dim=100, num_layers=1, gnn_type='gcn', aggr='sum', project=False, bias=True, activation='elu', **kwargs):
         super().__init__()
         self.ntips = ntips
         self.leaf_features = torch.eye(self.ntips)
@@ -17,14 +17,14 @@ class GNNModel(nn.Module):
         if gnn_type == 'identity':
             self.gnn = IDConv()
         elif gnn_type != 'ggnn':
-            self.gnn = GNNStack(self.ntips, hidden_dim, num_layers=num_layers, bias=bias, gnn_type=gnn_type, aggr=aggr, project=project)
+            self.gnn = GNNStack(self.ntips, hidden_dim, num_layers=num_layers, bias=bias, gnn_type=gnn_type, aggr=aggr, project=project, activation=activation)
         else:
             self.gnn = GatedGraphConv(hidden_dim, num_layers=num_layers, bias=bias)
             
         if gnn_type == 'identity':
-            self.mean_std_net = MeanStdPooling(self.ntips, hidden_dim, bias=bias)
+            self.mean_std_net = MeanStdPooling(self.ntips, hidden_dim, bias=bias, activation=activation)
         else:
-            self.mean_std_net = MeanStdPooling(hidden_dim, hidden_dim, bias=bias)
+            self.mean_std_net = MeanStdPooling(hidden_dim, hidden_dim, bias=bias, activation=activation)
                 
     
     def node_embedding(self, tree):

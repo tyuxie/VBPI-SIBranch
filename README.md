@@ -4,85 +4,103 @@
 Tianyu Xie, Frederick A. Matsen, Marc A. Suchard, Cheng Zhang
 </div>
 
-
 ## Installation
-This repository is a light CPU-based implementation of VBPI-SIBranch.
-To create the torch environment, use the following command:
+
+This repository is a light CPU-based implementation of VBPI-SIBranch. Create
+the torch environment with:
+
 ```
 conda env create -f environment.yml
 conda activate vbpisibranch
 ```
 
 ## Training
-One can use the following command to reproduce the VBPI baseline ([Zhang, 2023](https://arxiv.org/abs/2302.08840)):
+
+Run the VBPI baseline ([Zhang, 2023](https://arxiv.org/abs/2302.08840)):
+
 ```
 python main.py --dataset DS1 --brlen_model gnn --gradMethod vimco
 ```
-To reproduce the results of VBPI-SIBranch with MSILB, run the command:
+
+Train the VBPI-SIBranch SIVI branch-length model:
+
 ```
 python main.py --dataset DS1 --brlen_model sivi --gradMethod sivi --nParticle 10 --nz 50
 ```
-To reproduce the results of VBPI-SIBranch with MIWLB, run the command:
+
+Train VBPI-SIBranch with MIWLB:
+
 ```
 python main.py --dataset DS1 --brlen_model iwhvi --gradMethod iwhvi --nParticle 10 --nz 50
 ```
 
-You can freely specify the number of particles ($K$) in "--nParticle" and the number of extra samples ($J$) in "--nz" for ablation studies. 
-The KL divergence from the tree topology ground truth to its variational approximation can be monitered during training by adding the "--empFreq" argument.
-
-Here we provide the time comsumption (in hours) for completing the training process (400K itertions) with the default setting, on a single core of Intel Xeon Platinum 9242 processor.
-
-| Method \ Data set | DS1|DS2|DS3|DS4|DS5|DS6|DS7|DS8|
-|----|----|----|----|----|----|----|----|----|
-|VBPI|11.8|13.2|15.7|17.3|20.0|20.5|26.0|26.2|
-|VBPI-SIBranch (MSILB)|19.5|21.7|25.1|28.2|34.9|33.9|42.6|43.8|
-|VBPI-SIBranch (MIWLB)|23.6|27.4|34.2|36.3|43.8|41.4|52.2|55.6|
+`--nParticle` sets the number of particles ($K$) and `--nz` the number of
+extra samples ($J$). `--empFreq` monitors the KL divergence from the empirical
+topology distribution during training.
 
 ## Evaluation
-Run the following code to evaluate the variational approximation:
+
+Evaluate a trained variational approximation:
+
 ```
 python main.py --dataset DS1 --brlen_model gnn --test
 python main.py --dataset DS1 --brlen_model sivi --test
 python main.py --dataset DS1 --brlen_model iwhvi --test
 ```
-These commands will auto-load the trained model and compute the evidence lower bound, 10-sample lower bound and marginal likelihood estimates.
 
-For DS1, this codebase also supports computing the evidence lower bounds on individual trees by adding the "--empFreq" argument.
+These commands auto-load the trained model and compute the evidence lower
+bound, the 10-sample lower bound, and marginal-likelihood estimates. For DS1,
+adding `--empFreq` computes evidence lower bounds on individual trees.
 
-## Synthetic experiments on eight-leaf trees
+## Performance
 
-The `synthetic_exp` directory contains synthetic experiments on eight-taxon
-datasets. The simulated alignments are under `synthetic_exp/L8trees/`, grouped
-by sequence length (`seqlen_10`, `seqlen_20`, ..., `seqlen_1000`). Each
-experiment directory contains:
+Training time (hours) for 400,000 iterations with the default settings, on a
+single core of an Intel Xeon Platinum 9242:
 
-- `dna.fasta`: the input alignment;
-- `tree.newick`: the simulated reference tree.
+| Method \ Data set | DS1|DS2|DS3|DS4|DS5|DS6|DS7|DS8|
+|----|----|----|----|----|----|----|----|----|
+|VBPI|11.8|13.2|15.7|17.3|20.0|20.5|26.0|26.2|
+|VBPI-SIBranch (MIWLB)|23.6|27.4|34.2|36.3|43.8|41.4|52.2|55.6|
 
-The shared tree-support set is stored in
-`synthetic_exp/ufboot/L8ALL_ufboot_rep_1` through
-`synthetic_exp/ufboot/L8ALL_ufboot_rep_10`. The synthetic runner loads this
-support set with the dataset name `L8ALL`, and filters invalid subsplit
-configurations before training.
+Each training run writes `<run>_times.npy`, the cumulative wall-clock seconds
+per logging block; the "Computation time" section of
+[`experiments/REPRODUCE_RECIPE.md`](experiments/REPRODUCE_RECIPE.md) describes
+how to aggregate these arrays.
 
-### Run all synthetic experiments
+## Experiments
 
-Run the batch script from the repository root:
+Experiment commands and environment variables are listed in
+[`experiments/REPRODUCE_RECIPE.md`](experiments/REPRODUCE_RECIPE.md); input
+data and provenance are documented in [`DATA.md`](DATA.md).
 
-```bash
-bash synthetic_exp/run_L8_synthetic_exp.sh
-```
+## Repository layout
 
-The script discovers every `dna.fasta` under `synthetic_exp/L8trees/` and
-trains the MIWLB model (`iwhvi` branch-length model and `iwhvi` gradient
-method) for 40,000 iterations.
+| Path | Contents |
+|---|---|
+| `main.py`, `src/` | VBPI-SIBranch implementation: SBN topology model, branch-length models, phylogenetic likelihood, training and evaluation driver |
+| `experiments/` | Benchmarks and fixed-tree/sampling launchers for the main-text experiments |
+| `vbpi_nf/` | Vendored VBPI-NF baseline implementation (Zhang, NeurIPS 2020) |
+| `synthetic_exp/` | Synthetic eight-taxon data and workflow (Figure 9) |
+| `mrbayes/` | MrBayes fixed-topology launch files used for the branch-length reference |
+| `data/`, `DATA.md` | Benchmark alignments, UFBoot support trees, and data documentation |
 
 ## References
+
 Zhang C. *Learnable Topological Features For Phylogenetic Inference via Graph Neural Networks*. ICLR 2023.
+
+Cock PJA, Antao T, Chang JT, et al. *Biopython: freely available Python tools for computational molecular biology and bioinformatics*. Bioinformatics. 2009.
+
+Huerta-Cepas J, Serra F, Bork P. *ETE 3: Reconstruction, analysis, and visualization of phylogenomic data*. Molecular Biology and Evolution. 2016.
+
+Minh BQ, Nguyen MAT, von Haeseler A. *Ultrafast approximation for phylogenetic bootstrap*. Molecular Biology and Evolution. 2013.
+
+Paszke A, Gross S, Massa F, et al. *PyTorch: An Imperative Style, High-Performance Deep Learning Library*. NeurIPS. 2019.
+
+Ronquist F, Teslenko M, van der Mark P, et al. *MrBayes 3.2: Efficient Bayesian phylogenetic inference and model choice across a large model space*. Systematic Biology. 2012.
 
 --- 
 
-Please consider citing our work if you find this codebase useful:
+Citation:
 ```
 @article{xie2024vbpisibranch,
   title={Variational Bayesian Phylogenetic Inference with Semi-implicit Branch Length Distributions},

@@ -4,26 +4,27 @@ import torch.nn.functional as F
 import math
 import pdb
 
-from src.gnnModels_slim import GNNStack, GatedGraphConv, IDConv
+from src.gnnModels_slim import GNNStack, GatedGraphConv, IDConv, activation_layer
 
 
 class MeanStdPooling(nn.Module):
-    def __init__(self, in_channels, hidden_channels, bias=True, **kwargs):
+    def __init__(self, in_channels, hidden_channels, bias=True, activation='elu', **kwargs):
         super().__init__()
-        self.net = nn.Sequential(nn.Linear(in_channels, hidden_channels, bias=bias),
-                                 nn.ELU(),
-                                 nn.Linear(hidden_channels, hidden_channels, bias=bias),
-                                 nn.ELU(),)       
-    
+        self.net = nn.Sequential(
+            nn.Linear(in_channels, hidden_channels, bias=bias),
+            activation_layer(activation),
+            nn.Linear(hidden_channels, hidden_channels, bias=bias),
+            activation_layer(activation),
+        )
+
     def forward(self, x, parent_index):
         mean_std = self.net(x)           
         mean_std = torch.max(mean_std[:-1], mean_std[parent_index])                
-        
         return mean_std
         
         
 class GNNEncoder(nn.Module):
-    def __init__(self, ntips, hidden_dim=100, num_layers=1, gnn_type='gcn', aggr='sum', bias=True, **kwargs):
+    def __init__(self, ntips, hidden_dim=100, num_layers=1, gnn_type='gcn', aggr='sum', bias=True, activation='elu', **kwargs):
         super().__init__()
         self.ntips = ntips
         self.leaf_features = torch.eye(self.ntips)
@@ -31,11 +32,11 @@ class GNNEncoder(nn.Module):
         if gnn_type == 'identity':
             self.gnn = IDConv()
         elif gnn_type != 'ggnn':
-            self.gnn = GNNStack(self.ntips, hidden_dim, num_layers=num_layers, bias=bias, gnn_type=gnn_type, aggr=aggr)
+            self.gnn = GNNStack(self.ntips, hidden_dim, num_layers=num_layers, bias=bias, gnn_type=gnn_type, aggr=aggr, activation=activation)
         else:
             self.gnn = GatedGraphConv(hidden_dim, num_layers=num_layers, bias=bias)
             
-        self.mean_std_net = MeanStdPooling(hidden_dim, hidden_dim, bias=bias)
+        self.mean_std_net = MeanStdPooling(hidden_dim, hidden_dim, bias=bias, activation=activation)
 
 
     def node_embedding(self, tree):
@@ -83,13 +84,13 @@ class GNNEncoder(nn.Module):
 
 
 class SIVIModel(nn.Module):
-    def __init__(self, ntips, latent_dim=50, hidden_dim=100, num_layers=1, gnn_type='gcn', aggr='sum', bias=True, **kwargs):
+    def __init__(self, ntips, latent_dim=50, hidden_dim=100, num_layers=1, gnn_type='gcn', aggr='sum', bias=True, activation='elu', **kwargs):
         super().__init__()
         self.ntips, self.latent_dim = ntips, latent_dim
         self.ndim = 2*self.ntips - 3
-        self.encoder = GNNEncoder(ntips, hidden_dim=hidden_dim, num_layers=num_layers, gnn_type=gnn_type, aggr=aggr, bias=bias)
+        self.encoder = GNNEncoder(ntips, hidden_dim=hidden_dim, num_layers=num_layers, gnn_type=gnn_type, aggr=aggr, bias=bias, activation=activation)
         self.readout = nn.Sequential(nn.Linear(hidden_dim+latent_dim, hidden_dim, bias=bias),
-                                        nn.ELU(),
+                                        activation_layer(activation),
                                         nn.Linear(hidden_dim, 2, bias=bias),)
         
     def forward(self, tree_list, batch_size_z, log_std_min=-3.):
@@ -116,16 +117,16 @@ class SIVIModel(nn.Module):
 
 
 class IWHVIModel(nn.Module):
-    def __init__(self, ntips, latent_dim=50, hidden_dim=100, num_layers=1, gnn_type='gcn', aggr='sum', bias=True, **kwargs):
+    def __init__(self, ntips, latent_dim=50, hidden_dim=100, num_layers=1, gnn_type='gcn', aggr='sum', bias=True, activation='elu', **kwargs):
         super().__init__()
         self.ntips, self.latent_dim = ntips, latent_dim
         self.ndim = 2*self.ntips - 3
-        self.encoder = GNNEncoder(ntips, hidden_dim=hidden_dim, num_layers=num_layers, gnn_type=gnn_type, aggr=aggr, bias=bias)
+        self.encoder = GNNEncoder(ntips, hidden_dim=hidden_dim, num_layers=num_layers, gnn_type=gnn_type, aggr=aggr, bias=bias, activation=activation)
         self.readout = nn.Sequential(nn.Linear(hidden_dim+latent_dim, hidden_dim, bias=bias),
-                                     nn.ELU(),
+                                     activation_layer(activation),
                                      nn.Linear(hidden_dim, 2, bias=bias),)
         self.reverse = nn.Sequential(nn.Linear(hidden_dim+1, hidden_dim, bias=bias),
-                                     nn.ELU(),
+                                     activation_layer(activation),
                                      nn.Linear(hidden_dim, 2*latent_dim, bias=bias),)
         
     def forward(self, tree_list, batch_size_z, log_std_min=-3.):

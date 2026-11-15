@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import copy
 from Bio import Phylo
@@ -149,7 +150,10 @@ def summary_raw(dataset, file_path, truncate=None, hpd=0.95, n_rep=10):
     n_samp_tree = 0
     
     for i in range(1, n_rep+1):
-        tree_dict_rep, tree_names_rep, tree_wts_rep = get_tree_list_raw(file_path + dataset + '/' + dataset + '_ufboot_rep_{}'.format(i), truncate=truncate, hpd=hpd)
+        filename = os.path.join(file_path, dataset, '{}_ufboot_rep_{}'.format(dataset, i))
+        if not os.path.exists(filename):
+            filename = os.path.join(file_path, '{}_ufboot_rep_{}'.format(dataset, i))
+        tree_dict_rep, tree_names_rep, tree_wts_rep = get_tree_list_raw(filename, truncate=truncate, hpd=hpd)
         for j, name in enumerate(tree_names_rep):
             tree_id = tree_dict_rep[name].get_topology_id()
             if tree_id not in tree_id_set_total:

@@ -3,8 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(dirname "$SCRIPT_DIR")"
-source "$ROOT/scripts/python_env.sh"
-resolve_project_python
+PYTHON_BIN="${PYTHON_BIN:-python}"
 RUN_DATE="${RUN_DATE:-$(date +%Y%m%d%H%M%S)}"
 DATASETS="${DATASETS:-DS1}"
 MODELS="${MODELS:-gnn sivi iwhvi}"
@@ -26,15 +25,12 @@ SEED="${SEED:-2023}"
 
 cd "$ROOT"
 
-check_dataset() {
-  local dataset="$1"
-  test -f "data/hohna_datasets_fasta/${dataset}.fasta" || {
-    echo "Missing alignment: data/hohna_datasets_fasta/${dataset}.fasta" >&2
-    exit 2
-  }
-  for replicate in {1..10}; do
-    test -f "data/ufboot_data_DS1-8/${dataset}/${dataset}_ufboot_rep_${replicate}" || {
-      echo "Missing UFBoot replicate: data/ufboot_data_DS1-8/${dataset}/${dataset}_ufboot_rep_${replicate}. Download the full data package and preserve its directory structure." >&2
+check_dataset() { # alignment plus ten UFBoot replicates
+  local dataset=$1 file
+  for file in "data/hohna_datasets_fasta/${dataset}.fasta" \
+              data/ufboot_data_DS1-8/"${dataset}"/"${dataset}"_ufboot_rep_{1..10}; do
+    [ -f "$file" ] || {
+      echo "Missing $file; download the full data package and preserve its directory structure." >&2
       exit 2
     }
   done
@@ -48,7 +44,7 @@ for dataset in $DATASETS; do
       sivi|iwhvi) grad_method="$model" ;;
       *) echo "Unsupported model '$model'. Available in this launcher: gnn sivi iwhvi." >&2; exit 2 ;;
     esac
-    for replicate in $(seq 1 "$REPLICATES"); do
+    for ((replicate = 1; replicate <= REPLICATES; replicate++)); do
       tag="$RUN_TAG"
       if [ "$REPLICATES" -gt 1 ]; then tag="${RUN_TAG}_rep${replicate}"; fi
       seed=$((SEED + replicate - 1))

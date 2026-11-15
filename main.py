@@ -1,7 +1,6 @@
 import argparse
 import os
 from copy import deepcopy
-from multiprocessing import Pool
 from src.dataManipulation import *
 from src.utils import summary, summary_raw, mcmc_treeprob, get_support_from_mcmc, BitArray, tree_process
 from src.vbpi import VBPI
@@ -25,6 +24,7 @@ def parse_args():
     parser.add_argument('--hdim', type=int, default=100, help='hidden dimension for node embedding net')
     parser.add_argument('--zdim', type=int, default=50, help='dimension for the latent variable z')
     parser.add_argument('--hL', type=int, default=2, help='number of hidden layers for node embedding net')
+    parser.add_argument('--activation', choices=['elu', 'relu'], default='elu', help='activation function for branch-length networks')
     parser.add_argument('--brlen_model', type=str, default='sivi', help='branch length models')
     parser.add_argument('--gnn_type', type=str, default='edge', help='gcn | sage | gin | ggnn')
     parser.add_argument('--aggr', type=str, default='sum', help='sum | mean | max')
@@ -46,7 +46,11 @@ def parse_args():
     parser.add_argument('--tf', type=int, default=1000, help='monitor frequency during training, default=1000')
     parser.add_argument('--sf', type=int, default=100000, help='save frequency, default=100000')
     parser.add_argument('--lbf', type=int, default=5000, help='lower bound test frequency, default=5000')
+    parser.add_argument('--eval-repeats', type=int, default=100, help='number of independent evaluation batches')
+    parser.add_argument('--eval-runs', type=int, default=10000, help='lower-bound samples per evaluation batch')
+    parser.add_argument('--empFreqTrees', type=int, default=42, help='number of empirical posterior topologies to evaluate when --empFreq is set')
     parser.add_argument('--workdir', type=str, default='results')
+    parser.add_argument('--run_tag', type=str, default='', help='optional result-directory tag for ablations')
     parser.add_argument('--gradMethod', type=str, default='sivi', help=' vimco | rws ')
 
     args = parser.parse_args()
@@ -62,6 +66,8 @@ def file_prepare(args):
         args.result_folder = args.result_folder + '_nz_' + str(args.nz) 
     if args.proj:
         args.result_folder = args.result_folder + '_proj'
+    if args.run_tag:
+        args.result_folder = args.result_folder + '_' + args.run_tag
     args.result_folder = args.result_folder + '_' + args.date
     args.load_from_path = args.result_folder + '/final.pt'
     args.save_to_path = args.result_folder + '/final.pt'
@@ -84,8 +90,6 @@ def main(args):
 
     if not args.test:
         logger.info('Training with the following settings:')
-    # else:
-    #     logger.info('Testing with the following settings:')
     for name, value in vars(args).items():
         logger.info('{} : {}'.format(name, value))
 
@@ -121,7 +125,7 @@ def main(args):
     torch.manual_seed(args.seed)
 
     model = VBPI(taxa, rootsplit_supp_dict, subsplit_supp_dict, data, pden=np.ones(4)/4., subModel=('JC', 1.0),
-                    emp_tree_freq=emp_tree_freq, latent_dim=args.zdim, hidden_dim=args.hdim, num_layers=args.hL, branch_model=args.brlen_model, gnn_type=args.gnn_type, aggr=args.aggr, project=args.proj)
+                    emp_tree_freq=emp_tree_freq, latent_dim=args.zdim, hidden_dim=args.hdim, num_layers=args.hL, branch_model=args.brlen_model, gnn_type=args.gnn_type, aggr=args.aggr, project=args.proj, activation=args.activation)
 
         
     if not args.test:
@@ -150,17 +154,28 @@ def main(args):
         
         if not args.empFreq:
             logger.info('Computing one sample lower bounds\n')
-            ELBOs = torch.stack([model.fast_lower_bound(total_runs=10000, batch_size_z=batch_size_z) for i in range(100)])
+            ELBOs = torch.stack([
+                model.fast_lower_bound(total_runs=args.eval_runs, batch_size_z=batch_size_z)
+                for _ in range(args.eval_repeats)
+            ])
+            flat_elbos = ELBOs.reshape(-1)
+            if args.eval_runs % 10 != 0:
+                raise ValueError('eval_runs must be divisible by 10 to compute LB-10')
 
-            lower_bound_1_sample = ELBOs.reshape((1000, 1000)).mean(-1).numpy()
+            chunk_size = min(1000, flat_elbos.numel())
+            lower_bound_1_sample = flat_elbos.reshape((-1, chunk_size)).mean(-1).numpy()
             np.save(args.load_from_path.replace('.pt', '_lower_bound_1.npy'), lower_bound_1_sample)
             logger.info('1-sample lower bound. MEAN:{} STD:{}'.format(np.mean(lower_bound_1_sample), np.std(lower_bound_1_sample)))
 
-            lower_bound_10_sample = torch.logsumexp(ELBOs.reshape((100, 1000, 10)) - np.log(10), dim=-1).mean(-1).numpy()
+            lower_bound_10_sample = torch.logsumexp(
+                ELBOs.reshape((args.eval_repeats, args.eval_runs // 10, 10)) - np.log(10), dim=-1
+            ).numpy()
             np.save(args.load_from_path.replace('.pt', '_lower_bound_10.npy'), lower_bound_10_sample)
             logger.info('10-sample lower bound. MEAN:{} STD:{}'.format(np.mean(lower_bound_10_sample), np.std(lower_bound_10_sample)))
 
-            marginal_likelihood_est = torch.logsumexp(ELBOs.reshape((1000, 1000)) - np.log(1000), dim=-1).numpy()
+            marginal_likelihood_est = torch.logsumexp(
+                flat_elbos.reshape((-1, chunk_size)) - np.log(chunk_size), dim=-1
+            ).numpy()
             np.save(args.load_from_path.replace('.pt', '_marginal_likelihood_est.npy'), marginal_likelihood_est)
             logger.info('marginal likelihood. MEAN:{} STD:{}'.format(np.mean(marginal_likelihood_est), np.std(marginal_likelihood_est)))
         else:
@@ -168,10 +183,10 @@ def main(args):
             logger.info('Computing 95% confidence interval tree lower bound\n')
             lower_bound_ci = []
             toBitArr = BitArray(taxa)
-            for i in tree_ci_index[:42]:
+            for i in tree_ci_index[:args.empFreqTrees]:
                 test_tree = tree_dict_total[tree_names_total[i]].copy()
                 tree_process(test_tree, toBitArr)
-                lower_bound_ci.append(model.tree_lower_bound(test_tree, n_runs=10000))
+                lower_bound_ci.append(model.tree_lower_bound(test_tree, n_runs=args.eval_runs))
                 logger.info('tree {} ELBO: {}'.format(i, lower_bound_ci[-1]))
             np.save(args.save_to_path.replace('.pt', '_tree_lower_bound.npy'), lower_bound_ci)
 

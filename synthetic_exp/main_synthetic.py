@@ -9,9 +9,9 @@ for _path in (_REPO_ROOT, _THIS_DIR):
         sys.path.insert(0, _path)
 
 from copy import deepcopy
-from multiprocessing import Pool
 from src.dataManipulation import *
 from support_preprocessing import filter_subsplit_support_for_sampling
+from src.treeManipulation import namenum
 from src.utils import summary, summary_raw, mcmc_treeprob, get_support_from_mcmc, BitArray, tree_process
 from src.vbpi import VBPI
 import time
@@ -77,6 +77,7 @@ def parse_args():
     parser.add_argument('--test', default=False, action='store_true', help='turn on the test mode')
     parser.add_argument('--date', type=str, default='2022-01-01', help=' 2020-04-01 | 2020-04-02 | ...... ')
     parser.add_argument('--seed', type=int, default=2023)
+    parser.add_argument('--n_samples', type=int, default=1000, help='number of posterior trees to write after training')
 
     ######### Optimizer arguments
     parser.add_argument('--stepszTree', type=float, default=0.001, help=' step size for tree topology parameters ')
@@ -182,11 +183,11 @@ def main(args):
         logger.info('\nVBPI running, results will be saved to: {}\n'.format(args.save_to_path))
         test_lb, test_kl_div, ts = model.learn({'tree':args.stepszTree,'branch':args.stepszBranch}, args.maxIter, test_freq=args.tf, lb_test_freq=args.lbf, n_particles=args.nParticle, anneal_freq=args.af, save_freq=args.sf, init_inverse_temp=args.invT0, warm_start_interval=args.nwarmStart, batch_size_z=args.nz if args.nz==None else args.nz + 1, method=args.gradMethod, save_to_path=args.save_to_path, logger=logger)
 
-        sampled_output_path = args.save_to_path.replace('.pt', '_sampled_1000_trees.newick')
-        logger.info('Sampling 1000 trees with branch lengths to: {}'.format(sampled_output_path))
+        sampled_output_path = args.save_to_path.replace('.pt', '_sampled_{}_trees.newick'.format(args.n_samples))
+        logger.info('Sampling {} trees with branch lengths to: {}'.format(args.n_samples, sampled_output_path))
         sampled_trees = []
         with torch.no_grad():
-            for i in range(1000):
+            for i in range(args.n_samples):
                 tree = model.tree_model.sample_tree()
                 namenum(tree, taxa)
                 if args.brlen_model == 'iwhvi':
@@ -200,8 +201,8 @@ def main(args):
                     else:
                         node.dist = 0.0
                 sampled_trees.append(tree.write(format=5))
-                if (i + 1) % 100 == 0:
-                    logger.info('Sampled {} / 1000 trees'.format(i + 1))
+                if (i + 1) % 100 == 0 or i + 1 == args.n_samples:
+                    logger.info('Sampled {} / {} trees'.format(i + 1, args.n_samples))
 
         with open(sampled_output_path, 'w') as f:
             for newick in sampled_trees:

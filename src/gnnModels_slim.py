@@ -8,6 +8,15 @@ import pdb
 
 from torch import Tensor
 
+
+def activation_layer(name):
+    if name == 'elu':
+        return nn.ELU()
+    if name == 'relu':
+        return nn.ReLU()
+    raise ValueError('Unsupported activation: {}'.format(name))
+
+
 def uniform(size, value):
     if isinstance(value, Tensor):
         bound = 1. / math.sqrt(size)
@@ -41,14 +50,14 @@ class GCNConv(nn.Module):
         
 
 class SAGEConv(nn.Module):
-    def __init__(self, in_channels, out_channels, bias=True, aggr='mean', project=False, **kwargs):
+    def __init__(self, in_channels, out_channels, bias=True, aggr='mean', project=False, activation='elu', **kwargs):
         super().__init__()
         self.aggr = aggr
         self.in_channels, self.out_channels = in_channels, out_channels        
         self.proj = project
         if project:
             self.mlp = nn.Sequential(nn.Linear(self.in_channels, self.out_channels, bias=bias),
-                                     nn.ELU(),)
+                                     activation_layer(activation),)
             self.transform = nn.Linear(self.in_channels + self.out_channels, self.out_channels, bias=False)
         else:
             self.transform = nn.Linear(2*self.in_channels, self.out_channels, bias=bias)
@@ -95,11 +104,11 @@ class GINConv(nn.Module):
 
 
 class EdgeConv(nn.Module):
-    def __init__(self, in_channels, out_channels, bias=True, **kwargs):
+    def __init__(self, in_channels, out_channels, bias=True, activation='elu', **kwargs):
         super().__init__()
         self.in_channels, self.out_channels = in_channels, out_channels
         self.mlp = nn.Sequential(nn.Linear(2*self.in_channels, self.out_channels, bias=bias),
-                                 nn.ELU(),)
+                                 activation_layer(activation),)
         
     def forward(self, x, edge_index, *args):
         node_feature_padded = torch.cat((x, torch.zeros(1, self.in_channels)), dim=0)
@@ -154,40 +163,42 @@ class GNNStack(nn.Module):
                  'gin': GINConv,
                  'edge': EdgeConv,
              }
-    def __init__(self, in_channels, out_channels, num_layers=1, bias=True, aggr='sum', gnn_type='gcn', project=False, **kwargs):
+    def __init__(self, in_channels, out_channels, num_layers=1, bias=True, aggr='sum', gnn_type='gcn', project=False, activation='elu', **kwargs):
         super().__init__()
         self.in_channels, self.out_channels = in_channels, out_channels
         self.num_layers = num_layers
+        self.activation = activation
         
         self.gconvs = nn.ModuleList()
-        self.gconvs.append(self.gnnModels[gnn_type](self.in_channels, self.out_channels, bias=bias, aggr=aggr, project=project))
+        self.gconvs.append(self.gnnModels[gnn_type](self.in_channels, self.out_channels, bias=bias, aggr=aggr, project=project, activation=activation))
         for i in range(self.num_layers-1):
-            self.gconvs.append(self.gnnModels[gnn_type](self.out_channels, self.out_channels, bias=bias, aggr=aggr, project=project))
+            self.gconvs.append(self.gnnModels[gnn_type](self.out_channels, self.out_channels, bias=bias, aggr=aggr, project=project, activation=activation))
         
     
     def forward(self, x, edge_index):
         for i in range(self.num_layers):
             x = self.gconvs[i](x, edge_index)
-            x = F.elu(x)
+            x = activation_layer(self.activation)(x)
         
         return x
         
         
 
 class MeanStdPooling(nn.Module):
-    def __init__(self, in_channels, out_channels, bias=True, **kwargs):
+    def __init__(self, in_channels, out_channels, bias=True, activation='elu', **kwargs):
         super().__init__()
         self.in_channels, self.out_channels = in_channels, out_channels
-        
-        self.net = nn.Sequential(nn.Linear(self.in_channels, self.out_channels, bias=bias),
-                                 nn.ELU(),
-                                 nn.Linear(self.out_channels, self.out_channels, bias=bias),
-                                 nn.ELU(),)
-        
-        self.readout = nn.Sequential(nn.Linear(self.out_channels, self.out_channels, bias=bias),
-                                     nn.ELU(),
-                                     nn.Linear(self.out_channels, 2, bias=bias),)
-                                     
+        self.net = nn.Sequential(
+            nn.Linear(self.in_channels, self.out_channels, bias=bias),
+            activation_layer(activation),
+            nn.Linear(self.out_channels, self.out_channels, bias=bias),
+            activation_layer(activation),
+        )
+        self.readout = nn.Sequential(
+            nn.Linear(self.out_channels, self.out_channels, bias=bias),
+            activation_layer(activation),
+            nn.Linear(self.out_channels, 2, bias=bias),
+        )
     
     def forward(self, x, parent_index):
         mean_std = self.net(x)           

@@ -16,7 +16,7 @@ from src.phyloModel import PHY
 class VBPI(nn.Module):
     EPS = np.finfo(float).eps
     def __init__(self, taxa, rootsplit_supp_dict, subsplit_supp_dict, data, pden, subModel, emp_tree_freq=None,
-                 scale=0.1,latent_dim=50, hidden_dim=100, num_layers=1, branch_model='gnn', gnn_type='gcn', aggr='sum', project=False):
+                 scale=0.1,latent_dim=50, hidden_dim=100, num_layers=1, branch_model='gnn', gnn_type='gcn', aggr='sum', project=False, activation='elu'):
         super().__init__()
         self.taxa, self.emp_tree_freq = taxa, emp_tree_freq
         if emp_tree_freq:
@@ -33,11 +33,11 @@ class VBPI(nn.Module):
         self.rs_embedding_map, self.ss_embedding_map = self.tree_model.rs_map, self.tree_model.ss_map     
         self.branch_type = branch_model
         if branch_model == 'gnn':
-            self.branch_model = GNNModel(self.ntips, hidden_dim, num_layers=num_layers, gnn_type=gnn_type, aggr=aggr, project=project)
+            self.branch_model = GNNModel(self.ntips, hidden_dim, num_layers=num_layers, gnn_type=gnn_type, aggr=aggr, project=project, activation=activation)
         elif branch_model == 'sivi':
-            self.branch_model = SIVIModel(self.ntips, latent_dim, hidden_dim=hidden_dim, num_layers=num_layers, gnn_type=gnn_type, aggr=aggr)
+            self.branch_model = SIVIModel(self.ntips, latent_dim, hidden_dim=hidden_dim, num_layers=num_layers, gnn_type=gnn_type, aggr=aggr, activation=activation)
         elif branch_model == 'iwhvi':
-            self.branch_model = IWHVIModel(self.ntips, latent_dim, hidden_dim=hidden_dim, num_layers=num_layers, gnn_type=gnn_type, aggr=aggr)
+            self.branch_model = IWHVIModel(self.ntips, latent_dim, hidden_dim=hidden_dim, num_layers=num_layers, gnn_type=gnn_type, aggr=aggr, activation=activation)
         else:
             raise NotImplementedError
         
@@ -117,7 +117,7 @@ class VBPI(nn.Module):
                     logq_branch = torch.logsumexp(logq_branch -  logq_reverse - math.log(batch_size_z), dim=1)
                 else:
                     samp_log_branch, logq_branch = self.branch_model(test_trees, batch_size_z)
-                    if batch_size_z is not None:
+                    if self.branch_type == 'sivi' and batch_size_z is not None:
                         logq_branch = torch.logsumexp(logq_branch - math.log(batch_size_z), dim=1)
 
                 logll = torch.stack([self.phylo_model.loglikelihood(log_branch, test_tree) for log_branch, test_tree in zip(*[samp_log_branch, test_trees])])
