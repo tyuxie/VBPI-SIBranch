@@ -13,7 +13,6 @@ benchmark data (DS1-DS4 UFBoot and MrBayes files).
 | `data/ufboot_data_DS1-8/<dataset>/<dataset>_ufboot_rep_<1..10>` | Newick (plain text), one rooted tree per line | UFBoot topology-support trees: 10 replicates of 10,000 maximum-likelihood bootstrap trees each | IQ-TREE UFBoot (Minh et al. 2013, *Mol. Biol. Evol.*), following Zhang & Matsen (2019); replicated here as in VBPI (Zhang 2023) |
 | `data/raw_data_DS1-8/<dataset>/rep_<1..10>/<dataset>.trprobs` | NEXUS tree file (plain text) | MrBayes posterior samples of tree topologies with posterior probability weights; 10 replicate files per dataset | MrBayes 3.2 runs (Ronquist et al. 2012, *Syst. Biol.*); weights are combined with `samp_size = 750001` |
 | `data/raw_data_DS1-8/<dataset>/emp_tree_freq.pkl` | Python pickle (binary) | Precomputed dictionary mapping a tree-split key (tuple of bit-array integers) to its empirical topology frequency. The workflow recomputes these frequencies from the `.trprobs` files at run time and does not read this pickle. The DS2 copy is an empty placeholder (`None`); DS1, DS3, and DS4 contain 2611, 327, and 10677 entries. | Derived from the `.trprobs` files |
-| `<MRBAYES_TREE_ROOT>/tree<1..42>/tree<1..42>.nex.t` | NEXUS tree log (plain text) | Long-chain fixed-topology MrBayes samples: ground-truth branch-length distributions for the 42 DS1 posterior topologies. Set `MRBAYES_TREE_ROOT` to the parent directory. | Long MrBayes 3.2 run: 4 chains, one billion iterations, sampled every 100 iterations |
 | `synthetic_exp/L8trees/seqlen_<length>/tree_<replicate>/dna.fasta` | FASTA (plain text) | Simulated alignment for eight taxa `L1`-`L8` | Author-generated: Jukes-Cantor simulation on a random eight-taxon tree with Exp(10) branch lengths |
 | `synthetic_exp/L8trees/seqlen_<length>/tree_<replicate>/tree.newick` | Newick (plain text) | The generating (reference) tree for the paired alignment | Author-generated, as above |
 | `synthetic_exp/ufboot/L8ALL_ufboot_rep_<1..10>` | Newick (plain text), one tree per line | Shared topology support: 10 replicates of 10,395 trees each | IQ-TREE UFBoot (Minh et al. 2013, *Mol. Biol. Evol.*), pooled over all synthetic datasets (`L8ALL`) |
@@ -40,10 +39,7 @@ does not use these benchmark files.
 
 For DS1 fixed-tree experiments (Figures 4-6 and Table 2), the workflows use
 `data/hohna_datasets_fasta/DS1.fasta`, DS1 MrBayes `.trprobs` files, and UFBoot
-support files. Figure 5/6 additionally requires fixed-tree MrBayes samples
-`tree1/tree1.nex.t` through `tree42/tree42.nex.t`; set `MRBAYES_TREE_ROOT` to
-their parent directory. These samples are separate from the `.trprobs` files
-used to select and fit tree topologies.
+support files.
 
 ## Figure 9: Synthetic Data
 
