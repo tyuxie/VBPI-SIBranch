@@ -5,11 +5,6 @@ includes large benchmark files not stored in this repository. Preserve its
 directory structure when placing benchmark data under `data/`. The Git repository tracks a partial copy of the
 benchmark data (DS1-DS4 UFBoot and MrBayes files).
 
-<!-- AUTHOR TODO: verify that the Drive folder is publicly accessible and that
-its contents match the layout described below. Consider depositing the data
-package in a permanent archive (e.g., Zenodo or Dataverse) and adding its DOI
-here before acceptance. -->
-
 ## Data dictionary
 
 | Path | Format | Contents | Citation |
@@ -34,10 +29,6 @@ taxa and alignment sites are:
 |---|---|---|---|---|---|---|---|---|
 | Taxa | 27 | 29 | 36 | 41 | 50 | 50 | 59 | 64 |
 | Sites | 1949 | 2520 | 1812 | 1137 | 378 | 1133 | 1824 | 1008 |
-
-<!-- AUTHOR TODO: confirm the FASTA copies correspond to the distribution used
-for the manuscript analyses (the directory name refers to the Höhna
-distribution; the datasets originate from Lakner et al. 2008). -->
 
 ### UFBoot support and MrBayes posterior files
 
